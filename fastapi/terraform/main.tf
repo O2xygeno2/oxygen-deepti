@@ -62,6 +62,12 @@ resource "google_cloud_run_service" "cloud_run_service" {
   location = var.region
 
   template {
+    # Move vpc_access block here, at the same level as the spec block
+    vpc_access {
+      connector = google_vpc_access_connector.vpc_connector.name
+      egress    = "ALL_TRAFFIC"
+    }
+
     spec {
       containers {
         image = var.container_image
@@ -86,11 +92,6 @@ resource "google_cloud_run_service" "cloud_run_service" {
           name  = "DATABASE_NAME"
           value = var.db_name
         }
-      }
-
-      vpc_access {
-        connector = google_vpc_access_connector.vpc_connector.name
-        egress    = "ALL_TRAFFIC"
       }
 
       service_account_name  = google_service_account.cloud_run_sa.email
