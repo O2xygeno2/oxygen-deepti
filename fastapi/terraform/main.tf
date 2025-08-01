@@ -95,11 +95,15 @@ resource "google_cloud_run_service" "fastapi_service" {
   template {
     spec {
       containers {
-        image = "gcr.io/oxygen-deepti/your-fastapi-image:latest" # Replace this when image is ready
-
+        image = "southasia-docker.pkg.dev/oxygen-deepti/fastapi-backend-repo/fastapi-backend:latest"
+  
         env {
           name  = "DATABASE_HOST"
           value = google_sql_database_instance.postgres_instance.private_ip_address
+        }
+        env {
+          name  = "DATABASE_PORT"
+          value = "5432"
         }
         env {
           name  = "DATABASE_USER"
@@ -114,7 +118,6 @@ resource "google_cloud_run_service" "fastapi_service" {
           value = google_sql_database.app_database.name
         }
       }
-      # Use the VPC connector for private network access
       container_concurrency = 80
       service_account_name  = google_service_account.cloud_run_sa.email
       vpc_access {
