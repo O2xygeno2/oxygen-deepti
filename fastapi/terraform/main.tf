@@ -63,10 +63,10 @@ resource "google_cloud_run_service" "cloud_run_service" {
 
   template {
     # vpc_access goes here (same level as spec, not inside it)
-    #vpc_access {
-    #  connector = google_vpc_access_connector.vpc_connector.id
-    #  egress    = "ALL_TRAFFIC"
-    #}
+    vpc_access {
+      connector = google_vpc_access_connector.vpc_connector.id
+      egress    = "ALL_TRAFFIC"
+    }
 
     spec {
       containers {
