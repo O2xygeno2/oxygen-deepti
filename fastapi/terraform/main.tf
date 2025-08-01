@@ -86,11 +86,11 @@ resource "google_cloud_run_service" "cloud_run_service" {
           name  = "DATABASE_NAME"
           value = var.db_name
         }
+      }
 
-        vpc_access {
-          connector = google_vpc_access_connector.vpc_connector.name
-          egress    = "ALL_TRAFFIC"
-        }
+      vpc_access {
+        connector = google_vpc_access_connector.vpc_connector.name
+        egress    = "ALL_TRAFFIC"
       }
 
       service_account_name  = google_service_account.cloud_run_sa.email
