@@ -15,6 +15,12 @@ variable "zone" {
   default     = "southasia-1"
 }
 
+variable "vpc_network_name" {
+  description = "The name of the VPC network to use"
+  type        = string
+  default     = "oxygen-vpc"  # change this to your actual VPC network name
+}
+
 variable "vpc_connector_name" {
   description = "Name for the VPC Access Connector"
   type        = string
