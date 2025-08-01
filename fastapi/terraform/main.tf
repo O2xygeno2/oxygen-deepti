@@ -6,9 +6,9 @@ provider "google" {
 
 # VPC Access Connector
 resource "google_vpc_access_connector" "vpc_connector" {
-  name   = "${var.project_id}/locations/${var.region}/connectors/${var.vpc_connector_name}"
-  region = var.region
-  network = "default"  # or your custom VPC name
+  name          = "${var.project_id}/locations/${var.region}/connectors/${var.vpc_connector_name}"
+  region        = var.region
+  network       = var.vpc_network_name
   ip_cidr_range = "10.8.0.0/28"
 }
 
@@ -22,7 +22,7 @@ resource "google_sql_database_instance" "postgres_instance" {
     tier = var.db_machine_type
 
     ip_configuration {
-      private_network = "projects/${var.project_id}/global/networks/default"
+      private_network = "projects/${var.project_id}/global/networks/${var.vpc_network_name}"
       ipv4_enabled    = false
     }
 
@@ -88,7 +88,7 @@ resource "google_cloud_run_service" "cloud_run_service" {
         }
       }
 
-      service_account_name = google_service_account.cloud_run_sa.email
+      service_account_name  = google_service_account.cloud_run_sa.email
       container_concurrency = 80
 
       vpc_access {
@@ -106,9 +106,9 @@ resource "google_cloud_run_service" "cloud_run_service" {
 
 # Allow unauthenticated access to Cloud Run
 resource "google_cloud_run_service_iam_member" "invoker" {
-  location    = google_cloud_run_service.cloud_run_service.location
-  project     = var.project_id
-  service     = google_cloud_run_service.cloud_run_service.name
-  role        = "roles/run.invoker"
-  member      = "allUsers"
+  location = google_cloud_run_service.cloud_run_service.location
+  project  = var.project_id
+  service  = google_cloud_run_service.cloud_run_service.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 }
