@@ -87,6 +87,7 @@ resource "google_cloud_run_service" "cloud_run_service" {
           value = var.db_name
         }
       }
+
       service_account_name = google_service_account.cloud_run_sa.email
       container_concurrency = 80
 
@@ -97,7 +98,7 @@ resource "google_cloud_run_service" "cloud_run_service" {
     }
   }
 
-  traffics {
+  traffic {
     percent         = 100
     latest_revision = true
   }
