@@ -6,7 +6,7 @@ provider "google" {
 
 # VPC Access Connector
 resource "google_vpc_access_connector" "vpc_connector" {
-  name          = "${var.project_id}/locations/${var.region}/connectors/${var.vpc_connector_name}"
+  name          = var.vpc_connector_name
   region        = var.region
   network       = var.vpc_network_name
   ip_cidr_range = "10.8.0.0/28"
@@ -57,17 +57,12 @@ resource "google_project_iam_member" "cloud_run_cloudsql" {
 }
 
 # Cloud Run service
+# Cloud Run service
 resource "google_cloud_run_service" "cloud_run_service" {
   name     = var.cloud_run_service_name
   location = var.region
 
   template {
-    # Move vpc_access block here, at the same level as the spec block
-    vpc_access {
-      connector = google_vpc_access_connector.vpc_connector.name
-      egress    = "ALL_TRAFFIC"
-    }
-
     spec {
       containers {
         image = var.container_image
@@ -96,6 +91,12 @@ resource "google_cloud_run_service" "cloud_run_service" {
 
       service_account_name  = google_service_account.cloud_run_sa.email
       container_concurrency = 80
+      
+      # Moved vpc_access inside the spec block
+      vpc_access {
+        connector = google_vpc_access_connector.vpc_connector.name
+        egress    = "ALL_TRAFFIC"
+      }
     }
   }
 
