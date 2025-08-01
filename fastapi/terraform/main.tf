@@ -1,102 +1,71 @@
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 4.0"
-    }
-  }
-  required_version = ">= 1.1.0"
-}
-
 provider "google" {
-  project = "oxygen-deepti"
-  region  = "southasia1"
-  zone    = "southasia1-a"
+  project = var.project_id
+  region  = var.region
+  zone    = var.zone
 }
 
-# Enable necessary APIs
-resource "google_project_service" "cloud_run" {
-  service = "run.googleapis.com"
-}
-
-resource "google_project_service" "cloud_sql" {
-  service = "sqladmin.googleapis.com"
-}
-
-resource "google_project_service" "vpc_access" {
-  service = "vpcaccess.googleapis.com"
-}
-
-resource "google_project_service" "artifact_registry" {
-  service = "artifactregistry.googleapis.com"
-}
-
-# VPC network (default network could be used, but explicit is cleaner)
-resource "google_compute_network" "vpc_network" {
-  name                    = "oxygen-vpc-network"
-  auto_create_subnetworks = false
-}
-
-resource "google_compute_subnetwork" "vpc_subnet" {
-  name          = "oxygen-subnet"
-  ip_cidr_range = "10.10.0.0/16"
-  region        = "southasia1"
-  network       = google_compute_network.vpc_network.id
-}
-
-# Serverless VPC Access Connector for Cloud Run to connect to VPC (and thus Cloud SQL privately)
+# VPC Access Connector
 resource "google_vpc_access_connector" "vpc_connector" {
-  name   = "oxygen-vpc-connector"
-  region = "southasia1"
-  network = google_compute_network.vpc_network.name
-
+  name   = "${var.project_id}/locations/${var.region}/connectors/${var.vpc_connector_name}"
+  region = var.region
+  network = "default"  # or your custom VPC name
   ip_cidr_range = "10.8.0.0/28"
 }
 
-# Cloud SQL PostgreSQL instance
+# Cloud SQL instance
 resource "google_sql_database_instance" "postgres_instance" {
-  name             = "oxygen-db-instance"
-  database_version = "POSTGRES_14"
-  region           = "southasia1"
+  name             = var.db_instance_name
+  database_version = "POSTGRES_15"
+  region           = var.region
 
   settings {
-    tier = "db-f1-micro"  # minimum machine type for dev
+    tier = var.db_machine_type
+
     ip_configuration {
-      # Disable public IP to enforce private connection
+      private_network = "projects/${var.project_id}/global/networks/default"
       ipv4_enabled    = false
-      private_network = google_compute_network.vpc_network.id
     }
-    backup_configuration {
-      enabled = false
-    }
+
+    disk_size = var.db_disk_size
   }
-
-  deletion_protection = false
 }
 
-# PostgreSQL user
+# Cloud SQL user
 resource "google_sql_user" "db_user" {
-  name     = "deepti-db"
+  name     = var.db_username
   instance = google_sql_database_instance.postgres_instance.name
-  password = "DeeptiGarg@0111"
+  password = var.db_password
 }
 
-# Create a database in the instance (optional)
+# Cloud SQL database
 resource "google_sql_database" "app_database" {
-  name     = "appdb"
+  name     = var.db_name
   instance = google_sql_database_instance.postgres_instance.name
+}
+
+# Service Account for Cloud Run
+resource "google_service_account" "cloud_run_sa" {
+  account_id   = "cloud-run-sa"
+  display_name = "Cloud Run Service Account"
+}
+
+# Grant Cloud Run SA permission to access Cloud SQL
+resource "google_project_iam_member" "cloud_run_cloudsql" {
+  project = var.project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
 # Cloud Run service
-resource "google_cloud_run_service" "fastapi_service" {
-  name     = "oxygen-cloud-run"
-  location = "southasia1"
+resource "google_cloud_run_service" "cloud_run_service" {
+  name     = var.cloud_run_service_name
+  location = var.region
 
   template {
     spec {
       containers {
-        image = "southasia-docker.pkg.dev/oxygen-deepti/fastapi-backend-repo/fastapi-backend:latest"
-  
+        image = var.container_image
+
         env {
           name  = "DATABASE_HOST"
           value = google_sql_database_instance.postgres_instance.private_ip_address
@@ -107,19 +76,20 @@ resource "google_cloud_run_service" "fastapi_service" {
         }
         env {
           name  = "DATABASE_USER"
-          value = google_sql_user.db_user.name
+          value = var.db_username
         }
         env {
           name  = "DATABASE_PASSWORD"
-          value = google_sql_user.db_user.password
+          value = var.db_password
         }
         env {
           name  = "DATABASE_NAME"
-          value = google_sql_database.app_database.name
+          value = var.db_name
         }
       }
+      service_account_name = google_service_account.cloud_run_sa.email
       container_concurrency = 80
-      service_account_name  = google_service_account.cloud_run_sa.email
+
       vpc_access {
         connector = google_vpc_access_connector.vpc_connector.name
         egress    = "ALL_TRAFFIC"
@@ -133,23 +103,11 @@ resource "google_cloud_run_service" "fastapi_service" {
   }
 }
 
-# Create a service account for Cloud Run with Cloud SQL Client role
-resource "google_service_account" "cloud_run_sa" {
-  account_id   = "cloud-run-sa"
-  display_name = "Cloud Run service account"
-}
-
-resource "google_project_iam_member" "cloud_run_cloudsql" {
-  project = "oxygen-deepti"
-  role    = "roles/cloudsql.client"
-  member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
-}
-
-# Allow Cloud Run to be invoked publicly (optional, can be restricted later)
+# Allow unauthenticated access to Cloud Run
 resource "google_cloud_run_service_iam_member" "invoker" {
-  location    = google_cloud_run_service.fastapi_service.location
-  project     = "oxygen-deepti"
-  service     = google_cloud_run_service.fastapi_service.name
+  location    = google_cloud_run_service.cloud_run_service.location
+  project     = var.project_id
+  service     = google_cloud_run_service.cloud_run_service.name
   role        = "roles/run.invoker"
   member      = "allUsers"
 }
