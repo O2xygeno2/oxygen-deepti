@@ -57,16 +57,20 @@ resource "google_project_iam_member" "cloud_run_cloudsql" {
 }
 
 # Cloud Run service
-# Cloud Run service
 resource "google_cloud_run_service" "cloud_run_service" {
   name     = var.cloud_run_service_name
   location = var.region
 
   template {
+    # vpc_access goes here (same level as spec, not inside it)
+    vpc_access {
+      connector = google_vpc_access_connector.vpc_connector.id
+      egress    = "ALL_TRAFFIC"
+    }
+
     spec {
       containers {
         image = var.container_image
-
         env {
           name  = "DATABASE_HOST"
           value = google_sql_database_instance.postgres_instance.private_ip_address
@@ -88,15 +92,8 @@ resource "google_cloud_run_service" "cloud_run_service" {
           value = var.db_name
         }
       }
-
       service_account_name  = google_service_account.cloud_run_sa.email
       container_concurrency = 80
-      
-      # Moved vpc_access inside the spec block
-      vpc_access {
-        connector = google_vpc_access_connector.vpc_connector.name
-        egress    = "ALL_TRAFFIC"
-      }
     }
   }
 
