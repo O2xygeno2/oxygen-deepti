@@ -62,10 +62,11 @@ resource "google_cloud_run_service" "cloud_run_service" {
   location = var.region
 
   template {
-    # vpc_access goes here (same level as spec, not inside it)
-    vpc_access {
-      connector = google_vpc_access_connector.vpc_connector.id
-      egress    = "ALL_TRAFFIC"
+    metadata {
+      annotations = {
+        "run.googleapis.com/vpc-access-connector" = google_vpc_access_connector.vpc_connector.id
+        "run.googleapis.com/vpc-access-egress"    = "all-traffic"
+      }
     }
 
     spec {
