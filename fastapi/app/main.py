@@ -19,7 +19,3 @@ async def get_db() -> AsyncSession:
 @app.get("/")
 async def read_root(db: AsyncSession = Depends(get_db)):
     return {"msg": "FastAPI on Cloud Run with async PostgreSQL!"}
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run(app, host="0.0.0.0", port=port)
