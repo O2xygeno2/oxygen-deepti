@@ -105,6 +105,16 @@ resource "google_project_iam_member" "cloud_run_cloudsql" {
   member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
+# Artifact Registry repository
+resource "google_artifact_registry_repository" "fastapi_repo" {
+  provider      = google
+  project       = var.project_id
+  location      = var.region
+  repository_id = "fastapi-backend-repo"
+  description   = "Docker repository for FastAPI backend"
+  format        = "DOCKER"
+}
+
 # --------------------------
 # Cloud Run
 # --------------------------
