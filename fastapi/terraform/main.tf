@@ -107,13 +107,12 @@ resource "google_project_iam_member" "cloud_run_cloudsql" {
 
 # Artifact Registry repository
 resource "google_artifact_registry_repository" "fastapi_repo" {
-  provider      = google
-  project       = var.project_id
-  location      = var.region
+  project  = var.project_id
+  location = var.region
   repository_id = "fastapi-backend-repo"
-  description   = "Docker repository for FastAPI backend"
-  format        = "DOCKER"
+  format   = "DOCKER"
 }
+
 
 locals {
   container_image = "asia-south1-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.fastapi_repo.repository_id}/fastapi-backend:latest"
