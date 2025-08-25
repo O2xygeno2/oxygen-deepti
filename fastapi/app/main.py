@@ -8,8 +8,12 @@ app = FastAPI()
 # Ensure tables are created at startup
 @app.on_event("startup")
 async def startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(models.Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(models.Base.metadata.create_all)
+    except Exception as e:
+        print("Warning: Could not connect to DB on startup:", e)
+
 
 # Dependency for DB session
 async def get_db() -> AsyncSession:
