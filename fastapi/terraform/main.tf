@@ -115,6 +115,11 @@ resource "google_artifact_registry_repository" "fastapi_repo" {
   format        = "DOCKER"
 }
 
+locals {
+  container_image = "asia-south1-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.fastapi_repo.repository_id}/fastapi-backend:latest"
+}
+
+
 # --------------------------
 # Cloud Run
 # --------------------------
@@ -132,7 +137,7 @@ resource "google_cloud_run_service" "cloud_run_service" {
 
     spec {
       containers {
-        image = var.container_image
+        image = local.container_image
 
         env {
           name  = "DATABASE_HOST"
