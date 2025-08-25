@@ -5,10 +5,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = (
-    f"postgresql+asyncpg://{os.getenv('DATABASE_USER')}:{os.getenv('DATABASE_PASSWORD')}"
-    f"@{os.getenv('DATABASE_HOST')}:{os.getenv('DATABASE_PORT')}/{os.getenv('DATABASE_NAME')}"
-)
+if os.getenv("DATABASE_HOST").startswith("/cloudsql/"):
+    # Cloud Run socket connection
+    DATABASE_URL = (
+        f"postgresql+asyncpg://{os.getenv('DATABASE_USER')}:{os.getenv('DATABASE_PASSWORD')}"
+        f"@/{os.getenv('DATABASE_NAME')}?host={os.getenv('DATABASE_HOST')}"
+    )
+else:
+    # Local proxy connection
+    DATABASE_URL = (
+        f"postgresql+asyncpg://{os.getenv('DATABASE_USER')}:{os.getenv('DATABASE_PASSWORD')}"
+        f"@{os.getenv('DATABASE_HOST')}:{os.getenv('DATABASE_PORT')}/{os.getenv('DATABASE_NAME')}"
+    )
 
 # Create async engine
 engine = create_async_engine(DATABASE_URL, echo=True, future=True)
