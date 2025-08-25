@@ -4,9 +4,6 @@ provider "google" {
   zone    = var.zone
 }
 
-# --------------------------
-# Enable Required APIs
-# --------------------------
 resource "google_project_service" "vpcaccess" {
   project = var.project_id
   service = "vpcaccess.googleapis.com"
@@ -17,39 +14,45 @@ resource "google_project_service" "servicenetworking" {
   service = "servicenetworking.googleapis.com"
 }
 
-# --------------------------
-# Networking (VPC + Connector)
-# --------------------------
-# Reserve private IP range for Service Networking
+# Create custom VPC
+resource "google_compute_network" "vpc_network" {
+  name                    = var.vpc_network_name
+  auto_create_subnetworks = false
+}
+
+# Create subnet in your region
+resource "google_compute_subnetwork" "subnet" {
+  name          = "${var.vpc_network_name}-subnet"
+  ip_cidr_range = "10.10.0.0/16"
+  region        = var.region
+  network       = google_compute_network.vpc_network.id
+}
+
+# Reserve IP range for private services
 resource "google_compute_global_address" "private_ip_alloc" {
   name          = "private-ip-range"
   purpose       = "VPC_PEERING"
   address_type  = "INTERNAL"
   prefix_length = 16
-  network       = "projects/${var.project_id}/global/networks/${var.vpc_network_name}"
+  network       = google_compute_network.vpc_network.id
 }
 
-# Establish VPC peering for Service Networking
+# VPC peering for Service Networking (needed for Cloud SQL private IP)
 resource "google_service_networking_connection" "private_vpc_connection" {
-  network                 = "projects/${var.project_id}/global/networks/${var.vpc_network_name}"
+  network                 = google_compute_network.vpc_network.id
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_ip_alloc.name]
-
-  depends_on = [google_project_service.servicenetworking]
 }
 
-# Serverless VPC Access Connector
+# VPC Access Connector (for Cloud Run -> SQL)
 resource "google_vpc_access_connector" "vpc_connector" {
-  name          = var.vpc_connector_name
-  region        = var.region
-  network       = var.vpc_network_name
-  ip_cidr_range = "10.8.0.0/28"
+  name    = var.vpc_connector_name
+  region  = var.region
+  network = google_compute_network.vpc_network.name
 
-  # ✅ Required fields
+  ip_cidr_range  = "10.8.0.0/28"
   min_throughput = 200
   max_throughput = 300
-
-  depends_on = [google_project_service.vpcaccess]
 }
 
 # --------------------------
@@ -64,7 +67,7 @@ resource "google_sql_database_instance" "postgres_instance" {
     tier = var.db_machine_type
 
     ip_configuration {
-      private_network = "projects/${var.project_id}/global/networks/${var.vpc_network_name}"
+      private_network = google_compute_network.vpc_network.id
       ipv4_enabled    = false
     }
 
