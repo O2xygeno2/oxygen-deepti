@@ -1,15 +1,20 @@
 import os
+from urllib.parse import quote_plus
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
 load_dotenv()
 
+DB_USER = os.getenv("DATABASE_USER")
+DB_PASS = quote_plus(os.getenv("DATABASE_PASSWORD"))  # encode special chars
+DB_NAME = os.getenv("DATABASE_NAME")
+INSTANCE_CONNECTION_NAME = os.getenv("INSTANCE_CONNECTION_NAME")
+
 DATABASE_URL = (
-    f"postgresql+asyncpg://{os.getenv('DATABASE_USER')}:{os.getenv('DATABASE_PASSWORD')}"
-    f"@/{os.getenv('DATABASE_NAME')}?host={os.getenv('DATABASE_HOST')}"
+    f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@/{DB_NAME}"
+    f"?host=/cloudsql/{INSTANCE_CONNECTION_NAME}"
 )
-postgresql+asyncpg://deepti-db:DeeptiGarg0111!@/appdb?host=/cloudsql/master-shell-468709-v8:asia-south1:oxygen-db-instance
 
 # Create async engine
 engine = create_async_engine(DATABASE_URL, echo=True, future=True)
