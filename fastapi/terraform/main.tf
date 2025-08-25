@@ -4,15 +4,57 @@ provider "google" {
   zone    = var.zone
 }
 
-# VPC Access Connector
+# --------------------------
+# Enable Required APIs
+# --------------------------
+resource "google_project_service" "vpcaccess" {
+  project = var.project_id
+  service = "vpcaccess.googleapis.com"
+}
+
+resource "google_project_service" "servicenetworking" {
+  project = var.project_id
+  service = "servicenetworking.googleapis.com"
+}
+
+# --------------------------
+# Networking (VPC + Connector)
+# --------------------------
+# Reserve private IP range for Service Networking
+resource "google_compute_global_address" "private_ip_alloc" {
+  name          = "private-ip-range"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 16
+  network       = "projects/${var.project_id}/global/networks/${var.vpc_network_name}"
+}
+
+# Establish VPC peering for Service Networking
+resource "google_service_networking_connection" "private_vpc_connection" {
+  network                 = "projects/${var.project_id}/global/networks/${var.vpc_network_name}"
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_ip_alloc.name]
+
+  depends_on = [google_project_service.servicenetworking]
+}
+
+# Serverless VPC Access Connector
 resource "google_vpc_access_connector" "vpc_connector" {
   name          = var.vpc_connector_name
   region        = var.region
   network       = var.vpc_network_name
   ip_cidr_range = "10.8.0.0/28"
+
+  # ✅ Required fields
+  min_throughput = 200
+  max_throughput = 300
+
+  depends_on = [google_project_service.vpcaccess]
 }
 
-# Cloud SQL instance
+# --------------------------
+# Cloud SQL
+# --------------------------
 resource "google_sql_database_instance" "postgres_instance" {
   name             = var.db_instance_name
   database_version = "POSTGRES_15"
@@ -28,35 +70,41 @@ resource "google_sql_database_instance" "postgres_instance" {
 
     disk_size = var.db_disk_size
   }
+
+  depends_on = [google_service_networking_connection.private_vpc_connection]
 }
 
-# Cloud SQL user
+# DB User
 resource "google_sql_user" "db_user" {
   name     = var.db_username
   instance = google_sql_database_instance.postgres_instance.name
   password = var.db_password
 }
 
-# Cloud SQL database
+# DB Schema
 resource "google_sql_database" "app_database" {
   name     = var.db_name
   instance = google_sql_database_instance.postgres_instance.name
 }
 
+# --------------------------
 # Service Account for Cloud Run
+# --------------------------
 resource "google_service_account" "cloud_run_sa" {
   account_id   = "cloud-run-sa"
   display_name = "Cloud Run Service Account"
 }
 
-# Grant Cloud Run SA permission to access Cloud SQL
+# Grant Cloud Run SA access to Cloud SQL
 resource "google_project_iam_member" "cloud_run_cloudsql" {
   project = var.project_id
   role    = "roles/cloudsql.client"
   member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
-# Cloud Run service
+# --------------------------
+# Cloud Run
+# --------------------------
 resource "google_cloud_run_service" "cloud_run_service" {
   name     = var.cloud_run_service_name
   location = var.region
@@ -72,10 +120,10 @@ resource "google_cloud_run_service" "cloud_run_service" {
     spec {
       containers {
         image = var.container_image
+
         env {
           name  = "DATABASE_HOST"
-          value = google_sql_database_instance.postgres_instance.ip_address[0].ip_address
-
+          value = google_sql_database_instance.postgres_instance.private_ip_address
         }
         env {
           name  = "DATABASE_PORT"
@@ -105,7 +153,7 @@ resource "google_cloud_run_service" "cloud_run_service" {
   }
 }
 
-# Allow unauthenticated access to Cloud Run
+# Allow unauthenticated access
 resource "google_cloud_run_service_iam_member" "invoker" {
   location = google_cloud_run_service.cloud_run_service.location
   project  = var.project_id
