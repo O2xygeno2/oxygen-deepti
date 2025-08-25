@@ -4,29 +4,31 @@ variable "project_id" {
 }
 
 variable "region" {
-  description = "GCP region"
+  description = "Primary GCP region for resources"
   type        = string
-  default     = "southasia"
+  default     = "asia-south1" # Mumbai
 }
 
 variable "zone" {
-  description = "GCP zone"
+  description = "Primary GCP zone for resources"
   type        = string
-  default     = "southasia-1"
+  default     = "asia-south1-a" # Mumbai zone
 }
 
+# Networking
 variable "vpc_network_name" {
-  description = "The name of the VPC network to use"
+  description = "The name of the existing VPC network"
   type        = string
-  default     = "oxygen-vpc"  # change this to your actual VPC network name
+  default     = "oxygen-vpc"
 }
 
 variable "vpc_connector_name" {
-  description = "Name for the VPC Access Connector"
+  description = "Name for the Serverless VPC Access Connector"
   type        = string
   default     = "oxygen-vpc-connector"
 }
 
+# Cloud SQL
 variable "db_instance_name" {
   description = "Cloud SQL instance name"
   type        = string
@@ -34,7 +36,7 @@ variable "db_instance_name" {
 }
 
 variable "db_machine_type" {
-  description = "Cloud SQL machine type"
+  description = "Cloud SQL machine type (db-f1-micro, db-g1-small, db-custom-2-3840, etc.)"
   type        = string
   default     = "db-f1-micro"
 }
@@ -63,6 +65,7 @@ variable "db_name" {
   default     = "appdb"
 }
 
+# Cloud Run
 variable "cloud_run_service_name" {
   description = "Cloud Run service name"
   type        = string
@@ -70,6 +73,13 @@ variable "cloud_run_service_name" {
 }
 
 variable "container_image" {
-  description = "Container image URI"
+  description = "Container image URI in Artifact Registry or GCR"
   type        = string
+}
+
+# Optional: Pre-created Service Account (if no IAM permission to create one via Terraform)
+variable "cloud_run_sa_email" {
+  description = "Email of an existing service account for Cloud Run (if created manually)"
+  type        = string
+  default     = "" # leave empty if Terraform should create it
 }
