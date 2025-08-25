@@ -6,14 +6,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DB_USER = os.getenv("DATABASE_USER")
-DB_PASS = quote_plus(os.getenv("DATABASE_PASSWORD"))  # encode special chars
-DB_NAME = os.getenv("DATABASE_NAME")
-INSTANCE_CONNECTION_NAME = os.getenv("INSTANCE_CONNECTION_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASS = quote_plus(os.getenv("DB_PASS", ""))  # safely handle None
+DB_NAME = os.getenv("DB_NAME")
+DB_HOST = os.getenv("DATABASE_HOST")  # stays same because you set it correctly
+DB_PORT = os.getenv("DATABASE_PORT", "5432")
 
 DATABASE_URL = (
-    f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@/{DB_NAME}"
-    f"?host=/cloudsql/{INSTANCE_CONNECTION_NAME}"
+    f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@/{DB_NAME}?host={DB_HOST}"
 )
 
 # Create async engine
