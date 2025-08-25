@@ -10,6 +10,7 @@ resource "google_vpc_access_connector" "vpc_connector" {
   region        = var.region
   network       = var.vpc_network_name
   ip_cidr_range = "10.8.0.0/28"
+  depends_on = [google_project_service.vpcaccess]
 }
 
 # Cloud SQL instance
@@ -74,7 +75,8 @@ resource "google_cloud_run_service" "cloud_run_service" {
         image = var.container_image
         env {
           name  = "DATABASE_HOST"
-          value = google_sql_database_instance.postgres_instance.private_ip_address
+          value = google_sql_database_instance.postgres_instance.ip_address[0].ip_address
+
         }
         env {
           name  = "DATABASE_PORT"
