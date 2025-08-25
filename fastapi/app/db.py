@@ -5,10 +5,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-    DATABASE_URL = (
-        f"postgresql+asyncpg://{os.getenv('DATABASE_USER')}:{os.getenv('DATABASE_PASSWORD')}"
-        f"@/{os.getenv('DATABASE_NAME')}?host={os.getenv('DATABASE_HOST')}"
-    )
+DATABASE_URL = (
+    f"postgresql+asyncpg://{os.getenv('DATABASE_USER')}:{os.getenv('DATABASE_PASSWORD')}"
+    f"@/{os.getenv('DATABASE_NAME')}?host={os.getenv('DATABASE_HOST')}"
+)
 
 # Create async engine
 engine = create_async_engine(DATABASE_URL, echo=True, future=True)
