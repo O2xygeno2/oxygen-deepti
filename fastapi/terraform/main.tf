@@ -10,7 +10,6 @@ resource "google_vpc_access_connector" "vpc_connector" {
   region        = var.region
   network       = var.vpc_network_name
   ip_cidr_range = "10.8.0.0/28"
-  depends_on = [google_project_service.vpcaccess]
 }
 
 # Cloud SQL instance
