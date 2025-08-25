@@ -10,6 +10,12 @@ DATABASE_URL = (
     f"@{os.getenv('DATABASE_HOST')}:{os.getenv('DATABASE_PORT')}/{os.getenv('DATABASE_NAME')}"
 )
 
-engine = create_async_engine(DATABASE_URL, echo=True)
+# Create async engine
+engine = create_async_engine(DATABASE_URL, echo=True, future=True)
 
-async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+# Create session factory
+async_session = sessionmaker(
+    bind=engine,
+    expire_on_commit=False,
+    class_=AsyncSession,
+)
