@@ -6,55 +6,62 @@ from sqlalchemy.pool import NullPool
 class Base(DeclarativeBase):
     pass
 
-# Your Cloud SQL instance configuration
-DB_CONFIG = {
-    "user": os.getenv("DB_USER", "fastapi-db-user"),  # You'll need to set this
-    "password": os.getenv("DB_PASSWORD", "fastapiDB@12"),  # Set via Secret Manager
-    "host": os.getenv("DB_HOST", "10.231.0.3"),  # Private IP for better performance
-    "port": os.getenv("DB_PORT", "5432"),
-    "database": os.getenv("DB_NAME", "fastapi-db-name"),  # Your database name
-    "connection_name": "master-shell-468709-v8:asia-south1:fastapi-db"
-}
-
 def get_database_url():
     """Get appropriate database URL based on environment"""
     
-    # For Cloud Run (use private IP)
-    if os.getenv("K_SERVICE"):  # Cloud Run environment
-        return f"postgresql+asyncpg://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+    # Get credentials from environment variables (never hardcode!)
+    db_user = os.getenv("DB_USER")
+    db_password = os.getenv("DB_PASSWORD")
+    db_name = os.getenv("DB_NAME")
     
-    # For local development (use public IP with SSL)
-    return f"postgresql+asyncpg://{DB_CONFIG['user']}:{DB_CONFIG['password']}@34.100.220.171:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+    if not all([db_user, db_password, db_name]):
+        raise ValueError("Missing required database environment variables")
+    
+    # For Cloud Run - use private IP with Cloud SQL connector context
+    if os.getenv("K_SERVICE"):  # Cloud Run environment
+        # In Cloud Run, we should use the Cloud SQL Proxy or connector
+        # For now, use private IP but this requires VPC connectivity
+        db_host = os.getenv("DB_HOST", "10.231.0.3")
+        return f"postgresql+asyncpg://{db_user}:{db_password}@{db_host}:5432/{db_name}"
+    
+    # For local development - use public IP with SSL
+    db_host = os.getenv("DB_HOST", "34.100.220.171")
+    ssl_mode = "require"  # Force SSL for public connections
+    return f"postgresql+asyncpg://{db_user}:{db_password}@{db_host}:5432/{db_name}?ssl={ssl_mode}"
 
-DATABASE_URL = get_database_url()
+try:
+    DATABASE_URL = get_database_url()
+except ValueError as e:
+    print(f"Database configuration error: {e}")
+    DATABASE_URL = None
 
-# Create async engine optimized for your Cloud SQL instance
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=os.getenv("DB_ECHO", "False").lower() == "true",
-    future=True,
-    poolclass=NullPool,  # Important for Cloud Run
-    connect_args={
-        "ssl": os.getenv("DB_SSL", "prefer"),  # SSL for public connections
-        "server_settings": {
-            "jit": "off",
-            "statement_timeout": "30000",
-            "lock_timeout": "10000"
-        }
-    }
-)
+if DATABASE_URL:
+    # Create async engine
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=os.getenv("DB_ECHO", "False").lower() == "true",
+        future=True,
+        poolclass=NullPool,
+        connect_args={}
+    )
 
-# Async session maker
-AsyncSessionLocal = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autoflush=False,
-    autocommit=False
-)
+    # Async session maker
+    AsyncSessionLocal = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autoflush=False,
+        autocommit=False
+    )
+else:
+    engine = None
+    AsyncSessionLocal = None
 
 async def get_db():
     """Dependency for getting async database session"""
+    if not AsyncSessionLocal:
+        raise RuntimeError("Database not configured properly")
+    
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -63,6 +70,8 @@ async def get_db():
 
 async def test_connection():
     """Test database connection"""
+    if not engine:
+        return False
     try:
         async with engine.begin() as conn:
             await conn.execute("SELECT 1")
@@ -73,5 +82,7 @@ async def test_connection():
 
 async def create_tables():
     """Create database tables"""
+    if not engine:
+        raise RuntimeError("Database engine not configured")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
