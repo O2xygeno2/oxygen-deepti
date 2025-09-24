@@ -2,13 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including gcc for building
 RUN apt-get update && apt-get install -y \
     gcc \
-    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install dependencies
+# Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -19,12 +18,6 @@ COPY . .
 RUN useradd -m -u 1000 fastapi-user
 USER fastapi-user
 
-# Expose port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
-
-# Start with gunicorn
 CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8080", "main:app"]
