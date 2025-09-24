@@ -23,7 +23,7 @@ steps:
     - '--set-env-vars'
     - 'DB_USER=$_DB_USER,DB_PASSWORD=$_DB_PASSWORD,DB_HOST=$_DB_HOST,DB_NAME=$_DB_NAME'
     - '--vpc-connector'
-    - 'asia-south1-connector'  # Region-specific connector name
+    - 'oxygen-vpc-connector'  # Region-specific connector name
     - '--cpu=2'
     - '--memory=2Gi'
 
