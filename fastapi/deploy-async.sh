@@ -20,7 +20,7 @@ gcloud run deploy oxygen-fastapi-app \
     --image gcr.io/$PROJECT_ID/oxygen-fastapi-app \
     --platform managed \
     --region $REGION \
-    --vpc-connector asia-south1-connector \
+    --vpc-connector oxygen-vpc-connector \
     --set-env-vars="DB_USER=$DB_USER,DB_PASSWORD=$DB_PASSWORD,DB_HOST=10.231.0.3,DB_NAME=$DB_NAME" \
     --cpu=2 \
     --memory=2Gi \
