@@ -2,44 +2,44 @@ import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
-import asyncpg
 
 class Base(DeclarativeBase):
     pass
 
-# Environment configuration
+# Your Cloud SQL instance configuration
 DB_CONFIG = {
-    "user": os.getenv("DB_USER", "postgres"),
-    "password": os.getenv("DB_PASSWORD", ""),
-    "host": os.getenv("DB_HOST", "localhost"),
+    "user": os.getenv("DB_USER", "postgres"),  # You'll need to set this
+    "password": os.getenv("DB_PASSWORD", ""),  # Set via Secret Manager
+    "host": os.getenv("DB_HOST", "10.231.0.3"),  # Private IP for better performance
     "port": os.getenv("DB_PORT", "5432"),
-    "database": os.getenv("DB_NAME", "postgres"),
-    "ssl": os.getenv("DB_SSL", "prefer")
+    "database": os.getenv("DB_NAME", "postgres"),  # Your database name
+    "connection_name": "master-shell-468709-v8:asia-south1:fastapi-db"
 }
 
-def create_async_engine_url():
-    """Create appropriate async database URL based on environment"""
+def get_database_url():
+    """Get appropriate database URL based on environment"""
     
-    # For Cloud Run with Cloud SQL private IP (recommended)
-    if os.getenv("CLOUD_SQL_CONNECTION_NAME"):
-        # Using private IP connection
+    # For Cloud Run (use private IP)
+    if os.getenv("K_SERVICE"):  # Cloud Run environment
         return f"postgresql+asyncpg://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
     
-    # For local development with public IP
-    return f"postgresql+asyncpg://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+    # For local development (use public IP with SSL)
+    return f"postgresql+asyncpg://{DB_CONFIG['user']}:{DB_CONFIG['password']}@34.100.220.171:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
 
-# Create async engine with optimization for Cloud Run
-DATABASE_URL = create_async_engine_url()
+DATABASE_URL = get_database_url()
 
+# Create async engine optimized for your Cloud SQL instance
 engine = create_async_engine(
     DATABASE_URL,
     echo=os.getenv("DB_ECHO", "False").lower() == "true",
     future=True,
-    poolclass=NullPool,  # Important for Cloud Run - no connection pooling at app level
+    poolclass=NullPool,  # Important for Cloud Run
     connect_args={
+        "ssl": os.getenv("DB_SSL", "prefer"),  # SSL for public connections
         "server_settings": {
-            "jit": "off",  # Improve performance for short-lived connections
-            "statement_timeout": "30000",  # 30 second timeout
+            "jit": "off",
+            "statement_timeout": "30000",
+            "lock_timeout": "10000"
         }
     }
 )
