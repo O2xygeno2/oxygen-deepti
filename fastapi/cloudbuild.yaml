@@ -1,0 +1,37 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/oxygen-fastapi-app', '.']
+  
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/oxygen-fastapi-app']
+  
+  # Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+    - 'run'
+    - 'deploy'
+    - 'oxygen-fastapi-app'  # Consistent naming
+    - '--image'
+    - 'gcr.io/$PROJECT_ID/oxygen-fastapi-app'
+    - '--platform'
+    - 'managed'
+    - '--region'
+    - 'asia-south1'
+    - '--allow-unauthenticated'
+    - '--set-env-vars'
+    - 'DB_USER=$_DB_USER,DB_PASSWORD=$_DB_PASSWORD,DB_HOST=$_DB_HOST,DB_NAME=$_DB_NAME'
+    - '--vpc-connector'
+    - 'asia-south1-connector'  # Region-specific connector name
+    - '--cpu=2'
+    - '--memory=2Gi'
+
+substitutions:
+  _DB_USER: fastapi-db-user
+  _DB_NAME: fastapi-db-name
+  _DB_HOST: '10.231.0.3'  # Private IP
+  _DB_PASSWORD: 'fastapiDB@12'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
