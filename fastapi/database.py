@@ -8,11 +8,11 @@ class Base(DeclarativeBase):
 
 # Your Cloud SQL instance configuration
 DB_CONFIG = {
-    "user": os.getenv("DB_USER", "postgres"),  # You'll need to set this
-    "password": os.getenv("DB_PASSWORD", ""),  # Set via Secret Manager
+    "user": os.getenv("DB_USER", "fastapi-db-user"),  # You'll need to set this
+    "password": os.getenv("DB_PASSWORD", "fastapiDB@12"),  # Set via Secret Manager
     "host": os.getenv("DB_HOST", "10.231.0.3"),  # Private IP for better performance
     "port": os.getenv("DB_PORT", "5432"),
-    "database": os.getenv("DB_NAME", "postgres"),  # Your database name
+    "database": os.getenv("DB_NAME", "fastapi-db-name"),  # Your database name
     "connection_name": "master-shell-468709-v8:asia-south1:fastapi-db"
 }
 
