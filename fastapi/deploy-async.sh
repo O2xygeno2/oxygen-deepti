@@ -8,9 +8,9 @@ export PROJECT_ID=$(gcloud config get-value project)
 export REGION="asia-south1"
 
 # Get database connection details
+export INSTANCE_NAME="fastapi-db"
 export DB_HOST=$(gcloud sql instances describe $INSTANCE_NAME --format='value(ipAddresses[0].ipAddress)')
 export DB_PASSWORD="fastapiDB@12"
-export INSTANCE_NAME="fastapi-db"
 
 echo "Deploying FastAPI app to Cloud Run..."
 
