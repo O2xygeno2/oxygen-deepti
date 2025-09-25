@@ -13,7 +13,6 @@ COPY requirements.txt .
 # upgrade pip to latest
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir cloud-sql-python-connector[pg8000]
 
 
 # Copy application code
