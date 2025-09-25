@@ -7,13 +7,14 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
 
 # upgrade pip to latest
 RUN pip install --upgrade pip
-
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir cloud-sql-python-connector[pg8000]
+
 
 # Copy application code
 COPY . .
