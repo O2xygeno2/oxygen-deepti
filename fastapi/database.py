@@ -2,24 +2,22 @@ import os
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-from google.cloud.sql.connector.asyncpg import AsyncConnector
+from google.cloud.sql.connector import Connector  # Correct import
 
 class Base(DeclarativeBase):
     pass
 
 # Initialize Cloud SQL Connector
-connector = AsyncConnector()  # async connector for Python FastAPI
+connector = Connector()  # single Connector instance
 
 async def get_connection():
     """Get database connection using Cloud SQL Python Connector"""
 
-    # Fetch environment variables with defaults
     db_user = os.getenv("DB_USER", "fastapi-db-user")
     db_password = os.getenv("DB_PASSWORD", "fastapiDB@12")
     db_name = os.getenv("DB_NAME", "fastapi-db-name")
-    instance_conn_name = "master-shell-468709-v8:asia-south1:fastapi-db"
+    instance_conn_name = os.getenv("INSTANCE_CONNECTION_NAME", "master-shell-468709-v8:asia-south1:fastapi-db")
 
-    # Debug: print DB variables
     print("🔍 Debug: DB connection variables")
     print(f"  DB_USER: {db_user}")
     print(f"  DB_PASSWORD: {'*' * len(db_password) if db_password else 'NOT SET'}")
@@ -27,7 +25,6 @@ async def get_connection():
     print(f"  INSTANCE_CONNECTION_NAME: {instance_conn_name}")
 
     try:
-        # Create asyncpg connection via Cloud SQL connector
         conn = await connector.connect_async(
             instance_conn_name,
             driver="asyncpg",
@@ -49,14 +46,13 @@ engine = create_async_engine(
     pool_pre_ping=True,
 )
 
-# Async session factory
 AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False,
 )
 
-# Dependency to use in FastAPI routes
+# Dependency for FastAPI routes
 async def get_db():
     async with AsyncSessionLocal() as session:
         try:
@@ -70,18 +66,18 @@ async def test_connection():
         async with engine.begin() as conn:
             print("🔍 Debug: Testing DB connection with SELECT 1")
             await conn.execute("SELECT 1")
-        print("✅ Debug: DB test query succeeded")
+        print("✅ DB test query succeeded")
         return True
     except Exception as e:
-        print(f"❌ Debug: Database connection error: {e}")
+        print(f"❌ Database connection error: {e}")
         return False
 
-# Create tables using SQLAlchemy Base metadata
+# Create tables
 async def create_tables():
     try:
         async with engine.begin() as conn:
             print("🔍 Debug: Running create_all on Base metadata")
             await conn.run_sync(Base.metadata.create_all)
-        print("✅ Debug: Tables created successfully")
+        print("✅ Tables created successfully")
     except Exception as e:
-        print(f"❌ Debug: Failed to create tables: {e}")
+        print(f"❌ Failed to create tables: {e}")
