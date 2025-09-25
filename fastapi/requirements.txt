@@ -7,5 +7,5 @@ pydantic==2.5.0
 alembic==1.13.0
 gunicorn==21.2.0
 python-multipart==0.0.6
-google-cloud-sql-connector>=1.9.0
+cloud-sql-python-connector[pg8000]>=1.9.0
 greenlet==3.0.3
