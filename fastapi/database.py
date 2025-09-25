@@ -1,45 +1,47 @@
 import os
-import asyncpg
+import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-from google.cloud.sql.connector import Connector
+from cloud_sql.connector.asyncpg import AsyncConnector  # updated import
 
 class Base(DeclarativeBase):
     pass
 
 # Initialize Cloud SQL Connector
-connector = Connector()
+connector = AsyncConnector()  # async connector for Python FastAPI
 
 async def get_connection():
-    """Get database connection using Cloud SQL Connector"""
+    """Get database connection using Cloud SQL Python Connector"""
 
-    # Debug: print environment variables
+    # Fetch environment variables with defaults
     db_user = os.getenv("DB_USER", "fastapi-db-user")
     db_password = os.getenv("DB_PASSWORD", "fastapiDB@12")
     db_name = os.getenv("DB_NAME", "fastapi-db-name")
     instance_conn_name = "master-shell-468709-v8:asia-south1:fastapi-db"
 
+    # Debug: print DB variables
     print("🔍 Debug: DB connection variables")
     print(f"  DB_USER: {db_user}")
-    print(f"  DB_PASSWORD: {'*' * len(db_password) if db_password else 'NOT SET'}")  # hide actual password
+    print(f"  DB_PASSWORD: {'*' * len(db_password) if db_password else 'NOT SET'}")
     print(f"  DB_NAME: {db_name}")
     print(f"  INSTANCE_CONNECTION_NAME: {instance_conn_name}")
 
     try:
-        connection = await connector.connect_async(
+        # Create asyncpg connection via Cloud SQL connector
+        conn = await connector.connect_async(
             instance_conn_name,
-            "asyncpg",
+            driver="asyncpg",
             user=db_user,
             password=db_password,
             db=db_name
         )
         print("✅ Debug: Successfully created async connection object")
-        return connection
+        return conn
     except Exception as e:
         print(f"❌ Debug: Failed to create DB connection: {e}")
         raise
 
-# Create async engine with Cloud SQL Connector
+# Create SQLAlchemy async engine using the connector
 engine = create_async_engine(
     "postgresql+asyncpg://",
     async_creator=get_connection,
@@ -47,12 +49,14 @@ engine = create_async_engine(
     pool_pre_ping=True,
 )
 
+# Async session factory
 AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False,
 )
 
+# Dependency to use in FastAPI routes
 async def get_db():
     async with AsyncSessionLocal() as session:
         try:
@@ -60,6 +64,7 @@ async def get_db():
         finally:
             await session.close()
 
+# Test DB connection
 async def test_connection():
     try:
         async with engine.begin() as conn:
@@ -71,6 +76,7 @@ async def test_connection():
         print(f"❌ Debug: Database connection error: {e}")
         return False
 
+# Create tables using SQLAlchemy Base metadata
 async def create_tables():
     try:
         async with engine.begin() as conn:
