@@ -2,7 +2,7 @@ import os
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-from cloud_sql_connector.asyncpg import AsyncConnector  # updated import
+from google.cloud.sql.connector.asyncpg import AsyncConnector
 
 class Base(DeclarativeBase):
     pass
