@@ -10,28 +10,39 @@ steps:
   # Deploy to Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
-    - 'run'
-    - 'deploy'
-    - 'oxygen-fastapi-app'  # Consistent naming
-    - '--image'
-    - 'gcr.io/$PROJECT_ID/oxygen-fastapi-app'
-    - '--platform'
-    - 'managed'
-    - '--region'
-    - 'asia-south1'
-    - '--allow-unauthenticated'
-    - '--set-env-vars'
-    - 'DB_USER=$_DB_USER,DB_PASSWORD=$_DB_PASSWORD,DB_HOST=$_DB_HOST,DB_NAME=$_DB_NAME'
-    - '--vpc-connector'
-    - 'oxygen-vpc-connector'  # Region-specific connector name
-    - '--cpu=2'
-    - '--memory=2Gi'
+      - 'run'
+      - 'deploy'
+      - 'oxygen-fastapi-app'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/oxygen-fastapi-app'
+      - '--platform'
+      - 'managed'
+      - '--region'
+      - 'asia-south1'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'DB_USER=$_DB_USER'
+      - '--set-env-vars'
+      - 'DB_PASSWORD=$_DB_PASSWORD'
+      - '--set-env-vars'
+      - 'DB_HOST=$_DB_HOST'
+      - '--set-env-vars'
+      - 'DB_NAME=$_DB_NAME'
+      - '--set-env-vars'
+      - 'DB_PORT=5432'
+      - '--set-env-vars'
+      - 'CLOUD_SQL_CONNECTION_NAME=$_CLOUD_SQL_CONNECTION_NAME'
+      - '--vpc-connector'
+      - 'oxygen-vpc-connector'
+      - '--cpu=2'
+      - '--memory=2Gi'
 
 substitutions:
   _DB_USER: fastapi-db-user
   _DB_NAME: fastapi-db-name
-  _DB_HOST: '10.231.0.3'  # Private IP
-  _DB_PASSWORD: 'fastapiDB@12'
+  _DB_HOST: 10.231.0.3   # Private IP for Cloud Run (use public IP for local dev)
+  _DB_PASSWORD: fastapiDB@12
+  _CLOUD_SQL_CONNECTION_NAME: master-shell-468709-v8:asia-south1:fastapi-db
 
 options:
   logging: CLOUD_LOGGING_ONLY
