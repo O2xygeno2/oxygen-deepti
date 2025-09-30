@@ -1,5 +1,6 @@
 import os
 import logging
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from google.cloud.sql.connector import Connector
@@ -68,13 +69,17 @@ async def get_db():
 async def test_connection():
     try:
         async with engine.begin() as conn:
-            logger.info("🔍 Running test query: SELECT 1")
-            await conn.execute("SELECT 1")
-        logger.info("✅ DB test query succeeded")
-        return True
+            # ✅ Wrap raw SQL in text()
+            result = await conn.execute(text("SELECT 1"))
+            value = result.scalar_one()
+            if value == 1:
+                logger.info("✅ Database connection successful!")
+            else:
+                logger.error("❌ Unexpected result from DB")
     except Exception as e:
-        logger.exception("❌ Database connection error")
-        return False
+        logger.error("❌ Database connection error")
+        logger.exception(e)
+
 
 # Create tables
 async def create_tables():
