@@ -12,32 +12,28 @@ class Base(DeclarativeBase):
 # Connector instance
 connector = Connector()
 
-# Fetch env vars
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_NAME = os.getenv("DB_NAME")
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT", "5432")
-CLOUD_SQL_CONNECTION_NAME = os.getenv("CLOUD_SQL_CONNECTION_NAME")
+# Hardcoded values - CORRECTED
+DB_USER = "fastapi-db-user"
+DB_PASSWORD = "fastapiDB@12"
+DB_NAME = "fastapi-db-name"
+CLOUD_SQL_CONNECTION_NAME = "master-shell-468709-v8:asia-south1:fastapi-db"
 
 async def get_connection():
     logger.info("🔍 DB connection variables:")
     logger.info(f"  DB_USER={DB_USER}")
     logger.info(f"  DB_PASSWORD={'*' * len(DB_PASSWORD) if DB_PASSWORD else 'NOT SET'}")
     logger.info(f"  DB_NAME={DB_NAME}")
-    logger.info(f"  DB_HOST={DB_HOST}")
-    logger.info(f"  DB_PORT={DB_PORT}")
     logger.info(f"  CLOUD_SQL_CONNECTION_NAME={CLOUD_SQL_CONNECTION_NAME}")
 
     try:
+        # For Cloud SQL connector, only use connection_name, not host/port
         conn = await connector.connect_async(
-            CLOUD_SQL_CONNECTION_NAME,
-            driver="asyncpg",
+            CLOUD_SQL_CONNECTION_NAME,  # This is the key parameter
+            "asyncpg",  # driver
             user=DB_USER,
-            password=DB_PASSWORD,
-            db=DB_NAME,
-            host=DB_HOST,
-            port=int(DB_PORT)
+            password=DB_PASSWORD, 
+            db=DB_NAME
+            # Remove host and port - Cloud SQL connector handles this automatically
         )
         logger.info("✅ Successfully created async DB connection")
         return conn
